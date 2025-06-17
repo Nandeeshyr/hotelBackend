@@ -1,0 +1,17 @@
+git remote add origin https://github.com/Nandeeshyr/hotelBackend.git
+
+git add .
+git commit -m "Initial commit - Adding Hotel Management project"
+
+git branch -M main
+git push -u origin main
+
+github token settings
+Click "Generate new token" (classic).
+Under scopes, select:
+ repo (Full control of private repositories)
+ workflow (Optional, if using GitHub Actions)
+generate - use as pass
+creds:
+username authtoken
+

@@ -3,6 +3,8 @@ package com.hotel.serviceImpl;
 import java.util.Map;
 import java.util.Objects;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,7 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 @Service // The @Service annotation in Spring is used to mark a class as a service
 			// provider, indicating that it contains business logic.
 public class UserServiceImpl implements UserService {
-	
+	 private static final Logger logger = LoggerFactory.getLogger(UserServiceImpl.class);
 
 	@Autowired
 	UserDao userDao;
@@ -28,7 +30,7 @@ public class UserServiceImpl implements UserService {
 	@Override
 	public ResponseEntity<String> signUp(Map<String, String> requestMap) {
 		
-		log.info("Inside signUp {}", requestMap);
+		logger.info("Inside signUp {}", requestMap);
 		try {
 		if (validateSignUpMap(requestMap)) {
 			User user = userDao.findByEmailId(requestMap.get("email"));

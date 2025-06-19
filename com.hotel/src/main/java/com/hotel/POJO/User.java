@@ -1,26 +1,21 @@
-package com.hotel.POJO;
+package com.hotel.POJO; //Defines the package structure for better organization. POJO stands for "Plain Old Java Object" — a simple Java class without any heavy dependencies.
 
-import java.io.Serializable;
+import java.io.Serializable; //Implements serialization so the object can be converted to bytes — useful for caching, network transfers, or saving state.
 
-import org.hibernate.annotations.DynamicInsert;
+import org.hibernate.annotations.DynamicInsert; //Hibernate-specific annotations to optimize SQL operations: only non-null fields are inserted or updated.
 import org.hibernate.annotations.DynamicUpdate;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.NamedQuery;
-import jakarta.persistence.Table;
-import lombok.Data;
+import jakarta.persistence.*; //These are JPA annotations for ORM (Object-Relational Mapping) — used to map the class and its fields to a database table.
+
+import lombok.Data; //auto-generates boilerplate code — like getters, setters, toString(), etc., via the @Data annotation.
 
 @NamedQuery(name="User.findByEmailId", query="select u from User u where u.email=:email")
 
-@Data /*Generates getters, setters, toString(), equals(), and hashCode() methods automatically. Removes the need for manually defining these methods(removes below commented part).*/
+@Data /*Generates constructors, getters, setters, toString(), equals(), and hashCode() methods automatically. No need for manually defining these methods(removes below commented part).*/
 @Entity // Marks this class as a JPA entity, meaning it will be mapped to a database table.
 @DynamicInsert /*Ensures only non-null values are included in INSERT queries. Prevents default values in the database from being overridden.*/
 @DynamicUpdate /*Ensures only changed values are included in UPDATE queries. Optimizes database operations by preventing unnecessary updates.*/
-@Table(name = "user")
+@Table(name = "user") // Creates DB table with this
 public class User implements Serializable {
 
 	private static final long serialVersionUID = 1L;
@@ -48,18 +43,7 @@ public class User implements Serializable {
 
 	@Column(name = "role")
 	private String role;
-	
-//	public User(Integer id, String name, String contactNumber, String email, String password, String status,
-//			String role) {
-//		super();
-//		this.id = id;
-//		this.name = name;
-//		this.contactNumber = contactNumber;
-//		this.email = email;
-//		this.password = password;
-//		this.status = status;
-//		this.role = role;
-//	}
+
 
 	public Integer getId() {
 		return id;

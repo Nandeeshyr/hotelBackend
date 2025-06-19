@@ -1,7 +1,7 @@
 git remote add origin https://github.com/Nandeeshyr/hotelBackend.git
 
 git add .
-git commit -m "Initial commit - Modified Hotel Management project"
+git commit -m "Initial commit - Modified Hotel Management project - 1st video completed, Implemented User Registration backend"
 
 git branch -M main
 git push -u origin main

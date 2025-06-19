@@ -1,5 +1,7 @@
 package com.hotel.serviceImpl;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -19,21 +21,20 @@ import com.hotel.utils.HotelUtils;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-@Service // The @Service annotation in Spring is used to mark a class as a service
-			// provider, indicating that it contains business logic.
+@Service // Marks the class as a service component in Spring — it houses the business logic.
 public class UserServiceImpl implements UserService {
 	 private static final Logger logger = LoggerFactory.getLogger(UserServiceImpl.class);
 
-	@Autowired
-	UserDao userDao;
+	@Autowired //UserDao is injected here to perform database operations using JPA (like checking and saving users).
+	UserDao userDao; //userDao is a gateway or bridge to the database.
 
-	@Override
+	@Override //Accepts user data from the Controller as a Map<String, String>, where keys are like "email", "password" etc. Returns a ResponseEntity<String> — Spring’s HTTP response wrapper.
 	public ResponseEntity<String> signUp(Map<String, String> requestMap) {
-		
+		//requestMap is a Java Map<String, String> object that acts as a container for data sent from the client during a signup request.
 		logger.info("Inside signUp {}", requestMap);
 		try {
 		if (validateSignUpMap(requestMap)) {
-			User user = userDao.findByEmailId(requestMap.get("email"));
+			User user = userDao.findByEmailId(requestMap.get("email")); //Searches DB for an existing user by email.
 			if(Objects.isNull(user)) {
 				userDao.save(getUserFromMap(requestMap));
 				return HotelUtils.getResponseEntity("Successfully Registered", HttpStatus.OK);
@@ -69,4 +70,13 @@ return HotelUtils.getResponseEntity(HotelConstants.SOMETHING_WENT_WRONG, HttpSta
 
 		return user;
 	}
+	//Added Manually
+	public ResponseEntity<List<User>> getAllUsers() {
+	    try {
+	        return new ResponseEntity<>(userDao.findAll(), HttpStatus.OK);
+	    } catch (Exception e) {
+	        e.printStackTrace();
+	        return new ResponseEntity<>(new ArrayList<>(), HttpStatus.INTERNAL_SERVER_ERROR);
+	    }
+	}//Added Manually
 }

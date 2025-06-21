@@ -11,8 +11,10 @@ public interface UserService {
 
 	ResponseEntity<String> signUp(Map<String, String> requestMap);
 	
-	//Added Manually
+	//Added Manually to list users
 	ResponseEntity<List<User>> getAllUsers();
+
+	ResponseEntity<String> login(Map<String, String> requestMap);
 
 }
 	

@@ -21,8 +21,11 @@ public interface UserRest {
 	//@RequestBody is a Spring annotation that tells Spring to map the request’s JSON body into the method argument. 
 	//required = true means that the request must contain a body, or an error will be thrown. Map<String, String> requestMap →This parameter stores JSON request data as a key-value pair.
 	
-	//Added Manually
+	//Added Manually to list users
 	@GetMapping(path = "/users")
 	public ResponseEntity<List<User>> getAllUsers();
+	
+	@PostMapping(path = "/login")
+	public ResponseEntity<String> login(@RequestBody(required = true) Map<String, String> requestMap);
 
 }

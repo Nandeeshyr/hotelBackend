@@ -9,3 +9,8 @@ Was checking postman, gave 401 unauthorized And was checking logging issue
 done most-pushed
 finished 2nd video
 Checked postman, ^ fixed both-> gave 401 unauthorized And was checking logging issue
+
+done jwt - not pushed
+finished 3rd video
+Was checking postman, gave 400 bad request even though when entered right credentials.
+So was checking code. > mainly UserServiceImpl.java

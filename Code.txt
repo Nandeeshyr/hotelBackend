@@ -21,22 +21,24 @@ public class HotelConstants {
 	public static final String INVALID_DATA="Invalid Data.";
 
 }
-
 UserDao.java
 package com.hotel.dao;
+
+import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.repository.query.Param;
 
 import com.hotel.POJO.User;
+import com.hotel.wrapper.UserWrapper;
 
 //JpaRepository is a Spring Data interface that provides basic CRUD operations (like save(), findById(), delete(), etc.) so you don't have to write them yourself.
 public interface UserDao extends JpaRepository<User,Integer>{
 	//By extending JpaRepository<User, Integer>, it automatically inherits all CRUD methods for the User entity whose primary key (id) is of type Integer.
 	User findByEmailId(@Param("email") String email);
+	
+	List<UserWrapper> getAllUsers();
 }
-
-
 CustomerUserDetailsService.java
 package com.hotel.JWT;
 import java.util.ArrayList;
@@ -56,32 +58,35 @@ import lombok.extern.slf4j.Slf4j;
 public class CustomerUserDetailsService implements UserDetailsService {
 	private static final org.slf4j.Logger logger = LoggerFactory.getLogger(CustomerUserDetailsService.class);
 
-	@Autowired // Injects your DAO to access user data.
+	@Autowired // Injects your DAO to access user data. Used to fetch user data from the
+				// database.
 	UserDao userDao;
 
-	private com.hotel.POJO.User userDetail; // Stores user info temporarily for use elsewhere
+	private com.hotel.POJO.User userDetail; // Temporarily stores the full user object for later use (e.g., in UserServiceImpl).
 
 	@Override
 	public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-		// Called by Spring Security to load a user by email/username.
+		// Called by Spring Security to load a user by email/username. This is the core method Spring Security calls during authentication.
 		logger.info("Inside loadUserByUsername {}", username);
 		userDetail = userDao.findByEmailId(username); // Fetches the user from DB.
 		if (!Objects.isNull(userDetail))
 			return new User(userDetail.getEmail(), userDetail.getPassword(), new ArrayList<>());
-		// Wraps the user into Spring Security's own User object. The third param is a list of roles—empty for now.
+		// Wraps the user into Spring Security's own User object. The third param is a
+		// list of roles—empty for now.
 		else
 			throw new UsernameNotFoundException("User not found.");
 	}
 
-	public com.hotel.POJO.User getUserDetail() { //Allows external access to the full user object—not just Spring's subset.
+	public com.hotel.POJO.User getUserDetail() { // Allows external access to the full user object—not just Spring's subset.
 		return userDetail;
 	}
 
 }
-
 JwtFilter.java
 package com.hotel.JWT;
+
 import java.io.IOException;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -89,6 +94,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+
+
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -99,13 +106,13 @@ import jakarta.servlet.http.HttpServletResponse;
 public class JwtFilter extends OncePerRequestFilter {
 	//Spring will auto-register this filter. OncePerRequestFilter ensures it's run once per request.
 	@Autowired
-	private JwtUtil jwtUtil;
+	private JwtUtil jwtUtil; // Used to parse, extract, and validate JWTs.
 
 	@Autowired
-	private CustomerUserDetailsService service;
+	private CustomerUserDetailsService service; //Helps retrieve user details for Spring Security.
 
-	Claims claims = null;
-	private String userName = null;
+	Claims claims = null; //Full payload of the JWT.
+	private String userName = null; //Extracted subject (usually email) from the token.
 
 	@Override
 	protected void doFilterInternal(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse,
@@ -127,9 +134,9 @@ public class JwtFilter extends OncePerRequestFilter {
 				if (jwtUtil.validateToken(token, userDetails)) {
 					UsernamePasswordAuthenticationToken usernamePasswordAuthenticationToken = new UsernamePasswordAuthenticationToken(
 							userDetails, null, userDetails.getAuthorities());
-					usernamePasswordAuthenticationToken
-							.setDetails(new WebAuthenticationDetailsSource().buildDetails(httpServletRequest));
-					SecurityContextHolder.getContext().setAuthentication(usernamePasswordAuthenticationToken);
+					usernamePasswordAuthenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(httpServletRequest));
+					SecurityContextHolder.getContext().setAuthentication(usernamePasswordAuthenticationToken); 
+					//Spring Security will now treat this user as authenticated for the rest of the request lifecycle.
 
 				}
 			}
@@ -150,7 +157,6 @@ public class JwtFilter extends OncePerRequestFilter {
 		return userName;
 	}
 }
-
 JwtUtil.java
 	package com.hotel.JWT;
 	
@@ -208,9 +214,7 @@ JwtUtil.java
 			return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
 		}
 	}
-
-
-SecurityCOnfig.java
+SecurityConfig.java
 package com.hotel.JWT;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -256,7 +260,7 @@ public class SecurityConfig {
 	}
 
 	@Bean
-	public DaoAuthenticationProvider authenticationProvider() { //Tells Spring how to authenticate users (via your UserDetailsService and password encoder).
+	public DaoAuthenticationProvider authenticationProvider() { //Tells Spring Security to use our custom UserDetailsService and BCryptPasswordEncoder for authentication.
 		DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
 		provider.setUserDetailsService(customerUserDetailsService);
 		provider.setPasswordEncoder(passwordEncoder());
@@ -282,6 +286,8 @@ import jakarta.persistence.*; //These are JPA annotations for ORM (Object-Relati
 import lombok.Data; //auto-generates boilerplate code — like getters, setters, toString(), etc., via the @Data annotation.
 
 @NamedQuery(name="User.findByEmailId", query="select u from User u where u.email=:email")
+
+@NamedQuery(name="User.getAllUsers", query="select new com.hotel.wrapper.UserWrapper(u.id,u.name,u.email,u.contactNumber,u.status) from User u where u.role='user'")
 
 @Data /*Generates constructors, getters, setters, toString(), equals(), and hashCode() methods automatically. No need for manually defining these methods(removes below commented part).*/
 @Entity // Marks this class as a JPA entity, meaning it will be mapped to a database table.
@@ -392,7 +398,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 
-import com.hotel.POJO.User;
+import com.hotel.wrapper.UserWrapper;
 
 @RequestMapping(path = "/user") // meaning all endpoints will be prefixed with /user.
 public interface UserRest {
@@ -403,13 +409,12 @@ public interface UserRest {
 	//@RequestBody is a Spring annotation that tells Spring to map the request’s JSON body into the method argument. 
 	//required = true means that the request must contain a body, or an error will be thrown. Map<String, String> requestMap →This parameter stores JSON request data as a key-value pair.
 	
-	//Added Manually to list users
-	@GetMapping(path = "/users")
-	public ResponseEntity<List<User>> getAllUsers();
-	
 	@PostMapping(path = "/login")
 	public ResponseEntity<String> login(@RequestBody(required = true) Map<String, String> requestMap);
-
+	
+	//Added Manually to list users
+	@GetMapping(path = "/get")
+	public ResponseEntity<List<UserWrapper>> getAllUsers();
 }
 
 UserRestImpl.java
@@ -425,18 +430,16 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.hotel.POJO.User;
 import com.hotel.constants.HotelConstants;
 import com.hotel.rest.UserRest;
 import com.hotel.service.UserService;
 import com.hotel.utils.HotelUtils;
+import com.hotel.wrapper.UserWrapper;
 
 
-@RestController // it will handle HTTP requests, making it a Spring MVC controller that handles
-				// HTTP requests.
+@RestController // it will handle HTTP requests, making it a Spring MVC controller that handles HTTP requests.
 public class UserRestImpl implements UserRest {
-	@Autowired // Uses Dependency Injection - It automatically injects UserService, which
-				// likely handles business logic related to users.
+	@Autowired // Uses Dependency Injection - It automatically injects UserService, which likely handles business logic related to users.
 	UserService userService;
 
 	@Override
@@ -444,15 +447,14 @@ public class UserRestImpl implements UserRest {
 		try {
 			return userService.signUp(requestMap); // Implements signUp(), calling userService.signUp(requestMap),
 													// meaning the actual signup logic is in UserService.
-
 		} catch (Exception ex) {
 			ex.printStackTrace();
 		}
 		return HotelUtils.getResponseEntity(HotelConstants.SOMETHING_WENT_WRONG, HttpStatus.INTERNAL_SERVER_ERROR);
 	}
 
-	// Added Manually to list users
-	public ResponseEntity<List<User>> getAllUsers() {
+	// Added Manually to list users.
+	public ResponseEntity<List<UserWrapper>> getAllUsers() {
 		try {
 			return userService.getAllUsers();// Implements signUp(), calling userService.signUp(requestMap), meaning the
 												// actual signup logic is in UserService.
@@ -460,7 +462,7 @@ public class UserRestImpl implements UserRest {
 		} catch (Exception ex) {
 			ex.printStackTrace();
 		}
-		return new ResponseEntity<>(new ArrayList<>(), HttpStatus.INTERNAL_SERVER_ERROR);
+		return new ResponseEntity<List<UserWrapper>>(new ArrayList<>(), HttpStatus.INTERNAL_SERVER_ERROR);
 	}// Added Manually to list users
 
 	@Override
@@ -475,25 +477,22 @@ public class UserRestImpl implements UserRest {
 }
 UserService.java
 package com.hotel.service;
-
 import java.util.List;
 import java.util.Map;
-
 import org.springframework.http.ResponseEntity;
-
-import com.hotel.POJO.User;
+import com.hotel.wrapper.UserWrapper;
 
 public interface UserService {
 
 	ResponseEntity<String> signUp(Map<String, String> requestMap);
 	
 	//Added Manually to list users
-	ResponseEntity<List<User>> getAllUsers();
+	ResponseEntity<List<UserWrapper>> getAllUsers();
 
 	ResponseEntity<String> login(Map<String, String> requestMap);
 
 }
-
+	
 UserServiceImpl.java
 package com.hotel.serviceImpl;
 
@@ -514,12 +513,14 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.hotel.JWT.CustomerUserDetailsService;
+import com.hotel.JWT.JwtFilter;
 import com.hotel.JWT.JwtUtil;
 import com.hotel.POJO.User;
 import com.hotel.constants.HotelConstants;
 import com.hotel.dao.UserDao;
 import com.hotel.service.UserService;
 import com.hotel.utils.HotelUtils;
+import com.hotel.wrapper.UserWrapper;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -544,6 +545,9 @@ public class UserServiceImpl implements UserService {
 	
 	@Autowired
 	private BCryptPasswordEncoder passwordEncoder;
+	
+	@Autowired
+	JwtFilter jwtFilter;
 
 	@Override // Accepts user data from the Controller as a Map<String, String>, where keys
 				// are like "email", "password" etc. Returns a ResponseEntity<String> — Spring’s
@@ -593,9 +597,14 @@ public class UserServiceImpl implements UserService {
 	}
 
 	// Added Manually to list users
-	public ResponseEntity<List<User>> getAllUsers() {
+	@Override
+	public ResponseEntity<List<UserWrapper>> getAllUsers() {
 		try {
-			return new ResponseEntity<>(userDao.findAll(), HttpStatus.OK);
+			if(jwtFilter.isAdmin()) {
+				return new ResponseEntity<>(userDao.getAllUsers(), HttpStatus.OK);
+			}else {
+				return new ResponseEntity<>(new ArrayList<>(), HttpStatus.UNAUTHORIZED);
+			}
 		} catch (Exception e) {
 			e.printStackTrace();
 			return new ResponseEntity<>(new ArrayList<>(), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -629,20 +638,32 @@ public class UserServiceImpl implements UserService {
 	}
 }
 
+UserWrapper.java
+package com.hotel.wrapper;
 
-HotelUtils.java
-package com.hotel.utils;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+@Data
+@NoArgsConstructor
+public class UserWrapper {
+	
 
-public class HotelUtils {
-
-	private HotelUtils() {
-		
+	
+	private Integer id;
+	private String name;
+	private String email;
+	private String contactNumber;
+	private String status;
+	
+	public UserWrapper(Integer id, String name, String email, String contactNumber, String status) {
+		super();
+		this.id = id;
+		this.name = name;
+		this.email = email;
+		this.contactNumber = contactNumber;
+		this.status = status;
 	}
-	public static ResponseEntity<String> getResponseEntity(String responseMessage, HttpStatus httpStatus){
-		return new ResponseEntity<String>("{\"message\":\""+responseMessage+"\"}",httpStatus);
-	}
+	
 }
 

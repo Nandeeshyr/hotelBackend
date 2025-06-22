@@ -11,6 +11,12 @@ import lombok.Data; //auto-generates boilerplate code — like getters, setters,
 
 @NamedQuery(name="User.findByEmailId", query="select u from User u where u.email=:email")
 
+@NamedQuery(name="User.getAllUsers", query="select new com.hotel.wrapper.UserWrapper(u.id,u.name,u.email,u.contactNumber,u.status) from User u where u.role='user'")
+
+@NamedQuery(name="User.updateStatus", query="update User u set u.status=:status where u.id=:id")
+
+@NamedQuery(name="User.getAllAdmin", query="select u.email from User u where u.role='admin'")
+
 @Data /*Generates constructors, getters, setters, toString(), equals(), and hashCode() methods automatically. No need for manually defining these methods(removes below commented part).*/
 @Entity // Marks this class as a JPA entity, meaning it will be mapped to a database table.
 @DynamicInsert /*Ensures only non-null values are included in INSERT queries. Prevents default values in the database from being overridden.*/

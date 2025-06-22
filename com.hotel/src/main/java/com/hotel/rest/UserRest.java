@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 
-import com.hotel.POJO.User;
+import com.hotel.wrapper.UserWrapper;
 
 @RequestMapping(path = "/user") // meaning all endpoints will be prefixed with /user.
 public interface UserRest {
@@ -21,11 +21,13 @@ public interface UserRest {
 	//@RequestBody is a Spring annotation that tells Spring to map the request’s JSON body into the method argument. 
 	//required = true means that the request must contain a body, or an error will be thrown. Map<String, String> requestMap →This parameter stores JSON request data as a key-value pair.
 	
-	//Added Manually to list users
-	@GetMapping(path = "/users")
-	public ResponseEntity<List<User>> getAllUsers();
-	
 	@PostMapping(path = "/login")
 	public ResponseEntity<String> login(@RequestBody(required = true) Map<String, String> requestMap);
-
+	
+	//Added Manually to list users
+	@GetMapping(path = "/get")
+	public ResponseEntity<List<UserWrapper>> getAllUsers();
+	
+	@PostMapping(path = "/update")
+	public ResponseEntity<String> update(@RequestBody(required = true) Map<String, String> requestMap);
 }

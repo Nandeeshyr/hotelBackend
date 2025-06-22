@@ -14,3 +14,8 @@ done jwt - not pushed
 finished 3rd video
 Was checking postman, gave 400 bad request even though when entered right credentials.
 So was checking code. > mainly UserServiceImpl.java
+
+done jwt - pushed
+finished 3rd video
+Understood JWT authentication.
+Need to start 4th video

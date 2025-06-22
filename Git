@@ -3,8 +3,8 @@ git remote add origin https://github.com/Nandeeshyr/hotelBackend.git
 git add .
 git commit -m "Initial commit - Modified Hotel Management project - 1st video completed, Implemented User Registration backend"
 git commit -m "Initial commit - Modified Hotel Management project - 1st video completed, Recorded Process of data flow while user registration in Process.docx"
-
 git commit -m "Initial commit - Modified Hotel Management project - 2nd video completed, Recorded Process of data flow while user login with JWT implemented in Process.docx"
+git commit -m "Initial commit - Modified Hotel Management project - 3rd video completed, Implemented update backend, along with mailinator > completely working. Need to document in Process.docx"
 
 git branch -M main
 git push -u origin main

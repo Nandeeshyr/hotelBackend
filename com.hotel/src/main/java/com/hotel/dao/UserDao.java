@@ -20,7 +20,9 @@ public interface UserDao extends JpaRepository<User,Integer>{
 	
 	List<String> getAllAdmin();
 
-	@Transactional
-	@Modifying
+	@Transactional //JPA needs to manage changes in a transaction. If anything goes wrong, it can roll back.
+	@Modifying //Spring would expect a return result (like a List<T>), but here we’re executing a void-type query that returns how many rows were affected.
 	Integer updateStatus(@Param("status") String status, @Param("id") Integer id);
+	
+	User findByEmail(String email);
 }

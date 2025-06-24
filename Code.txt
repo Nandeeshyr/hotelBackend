@@ -1,4 +1,3 @@
-HotelManagementApplication.java
 package com.hotel;
 
 import org.springframework.boot.SpringApplication;
@@ -13,24 +12,27 @@ public class HotelManagementApplication {
 
 }
 
-HotelConstants.java
 package com.hotel.constants;
 
 public class HotelConstants {
 	public static final String SOMETHING_WENT_WRONG="Something went Wrong.";
 	public static final String INVALID_DATA="Invalid Data.";
+	public static final String UNAUTHORIZED_ACCESS="Unauthorized Access.";
 
 }
-UserDao.java
+
 package com.hotel.dao;
 
 import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.repository.query.Param;
 
 import com.hotel.POJO.User;
 import com.hotel.wrapper.UserWrapper;
+
+import jakarta.transaction.Transactional;
 
 //JpaRepository is a Spring Data interface that provides basic CRUD operations (like save(), findById(), delete(), etc.) so you don't have to write them yourself.
 public interface UserDao extends JpaRepository<User,Integer>{
@@ -38,18 +40,28 @@ public interface UserDao extends JpaRepository<User,Integer>{
 	User findByEmailId(@Param("email") String email);
 	
 	List<UserWrapper> getAllUsers();
+	
+	List<String> getAllAdmin();
+
+	@Transactional
+	@Modifying
+	Integer updateStatus(@Param("status") String status, @Param("id") Integer id);
 }
-CustomerUserDetailsService.java
+
 package com.hotel.JWT;
+
 import java.util.ArrayList;
 import java.util.Objects;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+
 import com.hotel.dao.UserDao;
+
 import org.slf4j.LoggerFactory;
 import lombok.extern.slf4j.Slf4j;
 
@@ -82,7 +94,7 @@ public class CustomerUserDetailsService implements UserDetailsService {
 	}
 
 }
-JwtFilter.java
+
 package com.hotel.JWT;
 
 import java.io.IOException;
@@ -157,7 +169,7 @@ public class JwtFilter extends OncePerRequestFilter {
 		return userName;
 	}
 }
-JwtUtil.java
+
 	package com.hotel.JWT;
 	
 	import java.util.Date;
@@ -214,7 +226,7 @@ JwtUtil.java
 			return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
 		}
 	}
-SecurityConfig.java
+
 package com.hotel.JWT;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -273,7 +285,6 @@ public class SecurityConfig {
 	}
 }
 
-User.java
 package com.hotel.POJO; //Defines the package structure for better organization. POJO stands for "Plain Old Java Object" — a simple Java class without any heavy dependencies.
 
 import java.io.Serializable; //Implements serialization so the object can be converted to bytes — useful for caching, network transfers, or saving state.
@@ -288,6 +299,10 @@ import lombok.Data; //auto-generates boilerplate code — like getters, setters,
 @NamedQuery(name="User.findByEmailId", query="select u from User u where u.email=:email")
 
 @NamedQuery(name="User.getAllUsers", query="select new com.hotel.wrapper.UserWrapper(u.id,u.name,u.email,u.contactNumber,u.status) from User u where u.role='user'")
+
+@NamedQuery(name="User.updateStatus", query="update User u set u.status=:status where u.id=:id")
+
+@NamedQuery(name="User.getAllAdmin", query="select u.email from User u where u.role='admin'")
 
 @Data /*Generates constructors, getters, setters, toString(), equals(), and hashCode() methods automatically. No need for manually defining these methods(removes below commented part).*/
 @Entity // Marks this class as a JPA entity, meaning it will be mapped to a database table.
@@ -385,7 +400,6 @@ public class User implements Serializable {
 	
 }
 
-UserRest.java
 package com.hotel.rest;
 
 import java.util.List;
@@ -415,9 +429,11 @@ public interface UserRest {
 	//Added Manually to list users
 	@GetMapping(path = "/get")
 	public ResponseEntity<List<UserWrapper>> getAllUsers();
+	
+	@PostMapping(path = "/update")
+	public ResponseEntity<String> update(@RequestBody(required = true) Map<String, String> requestMap);
 }
 
-UserRestImpl.java
 package com.hotel.restImpl;
 
 import java.util.ArrayList;
@@ -474,12 +490,25 @@ public class UserRestImpl implements UserRest {
 		}
 		return HotelUtils.getResponseEntity(HotelConstants.SOMETHING_WENT_WRONG, HttpStatus.INTERNAL_SERVER_ERROR);
 	}
+
+	@Override
+	public ResponseEntity<String> update(Map<String, String> requestMap) {
+		try {
+			return userService.update(requestMap);
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		}
+		return HotelUtils.getResponseEntity(HotelConstants.SOMETHING_WENT_WRONG, HttpStatus.INTERNAL_SERVER_ERROR);
+	}
 }
-UserService.java
+
 package com.hotel.service;
+
 import java.util.List;
 import java.util.Map;
+
 import org.springframework.http.ResponseEntity;
+
 import com.hotel.wrapper.UserWrapper;
 
 public interface UserService {
@@ -491,15 +520,19 @@ public interface UserService {
 
 	ResponseEntity<String> login(Map<String, String> requestMap);
 
+	ResponseEntity<String> update(Map<String, String> requestMap);
+
 }
 	
-UserServiceImpl.java
+
 package com.hotel.serviceImpl;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
+
 import org.springframework.security.authentication.AuthenticationManager;
 
 import org.slf4j.Logger;
@@ -519,6 +552,7 @@ import com.hotel.POJO.User;
 import com.hotel.constants.HotelConstants;
 import com.hotel.dao.UserDao;
 import com.hotel.service.UserService;
+import com.hotel.utils.EmailUtils;
 import com.hotel.utils.HotelUtils;
 import com.hotel.wrapper.UserWrapper;
 
@@ -542,12 +576,15 @@ public class UserServiceImpl implements UserService {
 
 	@Autowired
 	AuthenticationManager authenticationManager;
-	
+
 	@Autowired
 	private BCryptPasswordEncoder passwordEncoder;
-	
+
 	@Autowired
 	JwtFilter jwtFilter;
+	
+	@Autowired
+	EmailUtils emailUtils;
 
 	@Override // Accepts user data from the Controller as a Map<String, String>, where keys
 				// are like "email", "password" etc. Returns a ResponseEntity<String> — Spring’s
@@ -589,7 +626,7 @@ public class UserServiceImpl implements UserService {
 		user.setName(requestMap.get("name"));
 		user.setContactNumber(requestMap.get("contactNumber"));
 		user.setEmail(requestMap.get("email"));
-		user.setPassword(passwordEncoder.encode(requestMap.get("password")));//user.setPassword(requestMap.get("password"));
+		user.setPassword(passwordEncoder.encode(requestMap.get("password")));// user.setPassword(requestMap.get("password"));
 		user.setStatus("false");
 		user.setRole("user");
 
@@ -600,9 +637,9 @@ public class UserServiceImpl implements UserService {
 	@Override
 	public ResponseEntity<List<UserWrapper>> getAllUsers() {
 		try {
-			if(jwtFilter.isAdmin()) {
+			if (jwtFilter.isAdmin()) {
 				return new ResponseEntity<>(userDao.getAllUsers(), HttpStatus.OK);
-			}else {
+			} else {
 				return new ResponseEntity<>(new ArrayList<>(), HttpStatus.UNAUTHORIZED);
 			}
 		} catch (Exception e) {
@@ -614,7 +651,7 @@ public class UserServiceImpl implements UserService {
 	@Override
 	public ResponseEntity<String> login(Map<String, String> requestMap) {
 		logger.info("Inside Login {}", requestMap);
-		try { //like Authentication auth = authenticationManager.authenticate(token)
+		try { // like Authentication auth = authenticationManager.authenticate(token)
 			Authentication auth = authenticationManager.authenticate(
 					new UsernamePasswordAuthenticationToken(requestMap.get("email"), requestMap.get("password")));
 			if (auth.isAuthenticated()) {
@@ -636,9 +673,103 @@ public class UserServiceImpl implements UserService {
 		}
 		return new ResponseEntity<String>("{\"message\":\"" + "Bad Credentials." + "\"}", HttpStatus.BAD_REQUEST);
 	}
+
+	@Override
+	public ResponseEntity<String> update(Map<String, String> requestMap) {
+		try {
+			if (jwtFilter.isAdmin()) {
+				Optional<User> optional = userDao.findById(Integer.parseInt(requestMap.get("id")));
+				if (!optional.isEmpty()) {
+					userDao.updateStatus(requestMap.get("status"),Integer.parseInt(requestMap.get("id")));
+					sendMailToAllAdmin(requestMap.get("status"),optional.get().getEmail(),userDao.getAllAdmin());
+					return HotelUtils.getResponseEntity("User status updated successfully.", HttpStatus.OK);
+				} else {
+					HotelUtils.getResponseEntity("User Id does not exist.", HttpStatus.OK);
+				}
+			} else {
+				return HotelUtils.getResponseEntity(HotelConstants.UNAUTHORIZED_ACCESS, HttpStatus.UNAUTHORIZED);
+			}
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		}
+		return HotelUtils.getResponseEntity(HotelConstants.SOMETHING_WENT_WRONG, HttpStatus.INTERNAL_SERVER_ERROR);
+	}
+
+	private void sendMailToAllAdmin(String status, String user, List<String> allAdmin) {
+		allAdmin.remove(jwtFilter.getCurrentUser());
+		if(status!=null && status.equalsIgnoreCase("true")) {
+			emailUtils.sendSimpleMessage(jwtFilter.getCurrentUser(), "Account Approved.","USER:- "+user+" \n is approved by \n ADMIN:- "+jwtFilter.getCurrentUser(), allAdmin);
+		}else {
+			emailUtils.sendSimpleMessage(jwtFilter.getCurrentUser(), "Account Disabled.","USER:- "+user+" \n is disabled by \n ADMIN:- "+jwtFilter.getCurrentUser(), allAdmin);
+		}
+		
+	}
 }
 
-UserWrapper.java
+package com.hotel.utils;
+
+
+import java.util.List;
+
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.mail.MailException;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.stereotype.Service;
+
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
+@Service
+public class EmailUtils {
+
+	@Autowired
+	private JavaMailSender eMailSender;
+
+	public void sendSimpleMessage(String to, String subject, String text, List<String> list) {
+		SimpleMailMessage message = new SimpleMailMessage();
+		message.setFrom("nandyr183@gmail.com");
+		message.setTo(to);
+		message.setSubject(subject);
+		message.setText(text);
+		if (list != null && list.size() > 0) {
+			message.setCc(getCcArray(list));
+		}
+		eMailSender.send(message);
+		try {
+			eMailSender.send(message);
+		} catch (MailException ex) {
+		    System.out.printf("Email sending failed: {}", ex.getMessage());
+		}
+
+	}
+
+	private String[] getCcArray(List<String> ccList) {
+		String[] cc = new String[ccList.size()];
+		for (int i = 0; i < ccList.size(); i++) {
+			cc[i] = ccList.get(i);
+
+		}
+		return cc;
+	}
+}
+
+package com.hotel.utils;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+
+public class HotelUtils {
+
+	private HotelUtils() {
+		
+	}
+	public static ResponseEntity<String> getResponseEntity(String responseMessage, HttpStatus httpStatus){
+		return new ResponseEntity<String>("{\"message\":\""+responseMessage+"\"}",httpStatus);
+	}
+}
+
 package com.hotel.wrapper;
 
 import lombok.Data;
@@ -662,6 +793,46 @@ public class UserWrapper {
 		this.name = name;
 		this.email = email;
 		this.contactNumber = contactNumber;
+		this.status = status;
+	}
+
+	public Integer getId() {
+		return id;
+	}
+
+	public void setId(Integer id) {
+		this.id = id;
+	}
+
+	public String getName() {
+		return name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	public String getEmail() {
+		return email;
+	}
+
+	public void setEmail(String email) {
+		this.email = email;
+	}
+
+	public String getContactNumber() {
+		return contactNumber;
+	}
+
+	public void setContactNumber(String contactNumber) {
+		this.contactNumber = contactNumber;
+	}
+
+	public String getStatus() {
+		return status;
+	}
+
+	public void setStatus(String status) {
 		this.status = status;
 	}
 	

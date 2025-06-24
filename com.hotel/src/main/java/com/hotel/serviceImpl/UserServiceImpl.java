@@ -1,10 +1,12 @@
 package com.hotel.serviceImpl;
 
+import java.awt.datatransfer.StringSelection;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.springframework.security.authentication.AuthenticationManager;
 
@@ -18,6 +20,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.google.common.base.Strings;
 import com.hotel.JWT.CustomerUserDetailsService;
 import com.hotel.JWT.JwtFilter;
 import com.hotel.JWT.JwtUtil;
@@ -99,7 +102,7 @@ public class UserServiceImpl implements UserService {
 		user.setName(requestMap.get("name"));
 		user.setContactNumber(requestMap.get("contactNumber"));
 		user.setEmail(requestMap.get("email"));
-		user.setPassword(passwordEncoder.encode(requestMap.get("password")));// user.setPassword(requestMap.get("password"));
+		user.setPassword(passwordEncoder.encode(requestMap.get("password"))); //user.setPassword(requestMap.get("password")); - Replace this to store raw password in DB
 		user.setStatus("false");
 		user.setRole("user");
 
@@ -151,9 +154,9 @@ public class UserServiceImpl implements UserService {
 	public ResponseEntity<String> update(Map<String, String> requestMap) {
 		try {
 			if (jwtFilter.isAdmin()) {
-				Optional<User> optional = userDao.findById(Integer.parseInt(requestMap.get("id")));
+				Optional<User> optional = userDao.findById(Integer.parseInt(requestMap.get("id"))); //It verifies the user exists before trying to update.
 				if (!optional.isEmpty()) {
-					userDao.updateStatus(requestMap.get("status"),Integer.parseInt(requestMap.get("id")));
+					userDao.updateStatus(requestMap.get("status"),Integer.parseInt(requestMap.get("id"))); //Uses the @NamedQuery to directly update the status field in the DB.
 					sendMailToAllAdmin(requestMap.get("status"),optional.get().getEmail(),userDao.getAllAdmin());
 					return HotelUtils.getResponseEntity("User status updated successfully.", HttpStatus.OK);
 				} else {
@@ -177,4 +180,62 @@ public class UserServiceImpl implements UserService {
 		}
 		
 	}
+
+	@Override
+	public ResponseEntity<String> checkToken() {
+			return HotelUtils.getResponseEntity("true", HttpStatus.OK);
+	}
+
+	@Override
+	public ResponseEntity<String> changePassword(Map<String, String> requestMap) {
+		try {
+			User userObj = userDao.findByEmail(jwtFilter.getCurrentUser());
+			if(!userObj.equals(null)) {
+				if(passwordEncoder.matches(requestMap.get("oldPassword"), userObj.getPassword())) {
+				    userObj.setPassword(passwordEncoder.encode(requestMap.get("newPassword")));
+				    userDao.save(userObj);
+				    return HotelUtils.getResponseEntity("Password Updated Successfully", HttpStatus.OK);
+				}
+				return HotelUtils.getResponseEntity("Incorrect Old Password", HttpStatus.BAD_REQUEST);
+			}
+			return HotelUtils.getResponseEntity(HotelConstants.SOMETHING_WENT_WRONG, HttpStatus.INTERNAL_SERVER_ERROR);
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		}
+		return HotelUtils.getResponseEntity(HotelConstants.SOMETHING_WENT_WRONG, HttpStatus.INTERNAL_SERVER_ERROR);
+	}
+	
+	private String generateTemporaryPassword() {
+	    // Simple example — you can customize this for complexity
+	    return UUID.randomUUID().toString().substring(0, 8); // e.g., "a9b1c3d4"
+	}
+
+
+	@Override
+	public ResponseEntity<String> forgotPassword(Map<String, String> requestMap) {
+	    try {
+	        User user = userDao.findByEmail(requestMap.get("email"));
+	        if (user != null && user.getEmail() != null && !user.getEmail().isEmpty()) {
+	            String tempPassword = generateTemporaryPassword(); // Step 1: generate a new password
+	            user.setPassword(passwordEncoder.encode(tempPassword)); // Step 2: encode and save to DB
+	            userDao.save(user);
+
+	            emailUtils.forgotMail(
+	                user.getEmail(),
+	                "Temporary Password - Hotel Management System",
+	                tempPassword // Step 3: send raw password to user
+	            );
+
+	            return HotelUtils.getResponseEntity("Check your mail for temporary credentials.", HttpStatus.OK);
+	        } else {
+	            return HotelUtils.getResponseEntity("Email not found", HttpStatus.BAD_REQUEST);
+	        }
+	    } catch (Exception ex) {
+	        ex.printStackTrace();
+	    }
+	    return HotelUtils.getResponseEntity(HotelConstants.SOMETHING_WENT_WRONG, HttpStatus.INTERNAL_SERVER_ERROR);
+	}
+	
+	
+
 }

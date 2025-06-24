@@ -46,7 +46,7 @@ public class SecurityConfig {
 	public DaoAuthenticationProvider authenticationProvider() { //Tells Spring Security to use our custom UserDetailsService and BCryptPasswordEncoder for authentication.
 		DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
 		provider.setUserDetailsService(customerUserDetailsService);
-		provider.setPasswordEncoder(passwordEncoder());
+		provider.setPasswordEncoder(passwordEncoder()); //- Uncomment this to store hashed password in DB
 		return provider;
 	}
 

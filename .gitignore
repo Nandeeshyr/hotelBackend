@@ -1,0 +1,5 @@
+# Ignore all application.properties files
+**/application.properties
+
+# Ignore environment files
+.env

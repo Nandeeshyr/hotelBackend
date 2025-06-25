@@ -1,6 +1,5 @@
 package com.hotel.serviceImpl;
 
-import java.awt.datatransfer.StringSelection;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -20,7 +19,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import com.google.common.base.Strings;
 import com.hotel.JWT.CustomerUserDetailsService;
 import com.hotel.JWT.JwtFilter;
 import com.hotel.JWT.JwtUtil;
@@ -206,7 +204,6 @@ public class UserServiceImpl implements UserService {
 	}
 	
 	private String generateTemporaryPassword() {
-	    // Simple example — you can customize this for complexity
 	    return UUID.randomUUID().toString().substring(0, 8); // e.g., "a9b1c3d4"
 	}
 

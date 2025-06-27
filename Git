@@ -7,7 +7,7 @@ git commit -m "Initial commit - Modified Hotel Management project - 2nd video co
 git commit -m "Initial commit - Modified Hotel Management project - 3rd video completed, Implemented update backend, along with mailinator > completely working. Need to document in Process.docx"
 git commit -m "Initial commit - Modified Hotel Management project - 3rd video completed, Implemented update backend, along with mailinator > completely working. Need to document in Process.docx --- 4th video completed, Implemented updatePassword/forgotPassword backend, along with mailinator > completely working. Need to document in Process.docx"
 git commit -m "Initial commit - Modified Hotel Management project - 4th video completed, Implemented updatePassword/forgotPassword backend, along with mailinator > completely working. Documented in Process.docx"
-
+git commit -m "Initial commit - Modified Hotel Management project - 5th video completed, Implemented food category backend, Add/Get/Update categories > completely working. Need to document in Process.docx"
 
 git branch -M main
 git push -u origin main

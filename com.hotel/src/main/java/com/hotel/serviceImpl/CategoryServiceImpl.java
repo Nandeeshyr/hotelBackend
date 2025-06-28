@@ -34,11 +34,11 @@ public class CategoryServiceImpl implements CategoryService {
 	JwtFilter jwtFilter;
 
 	@Override
-	public ResponseEntity<String> addNewCategory(Map<String, String> requsetMap) {
+	public ResponseEntity<String> addNewCategory(Map<String, String> requestMap) {
 		try {
 			if (jwtFilter.isAdmin()) {
-				if (validateCategoryMap(requsetMap, false)) {
-					categoryDao.save(getCategoryFromMap(requsetMap, false));
+				if (isValidForAdd(requestMap)) { //Calls a helper method to validate that the request contains the required "name" field.
+					categoryDao.save(createCategoryForAdd(requestMap)); //Converts the request map into a Category object and saves it to the database.
 					return HotelUtils.getResponseEntity("Category Added Successfully", HttpStatus.OK);
 				}
 			} else {
@@ -49,49 +49,29 @@ public class CategoryServiceImpl implements CategoryService {
 		}
 		return HotelUtils.getResponseEntity(HotelConstants.SOMETHING_WENT_WRONG, HttpStatus.INTERNAL_SERVER_ERROR);
 	}
-
-	private boolean validateCategoryMap(Map<String, String> requsetMap, boolean validateId) {
-		if (requsetMap.containsKey("name")) {
-			if (requsetMap.containsKey("id") && validateId) {
-				return true;
-			} else if (!validateId) {
-				return true;
-			}
-		}
-		return false;
-	}
-
-	private Category getCategoryFromMap(Map<String, String> requestMap, Boolean isAdd) {
-		Category category = new Category();
-		if (isAdd) {
-			category.setId(Integer.parseInt(requestMap.get("id")));
-		}
-		category.setName(requestMap.get("name"));
-		return category;
-	}
-
+	
 	@Override
 	public ResponseEntity<List<Category>> getAllCategory(String filteredValue) {
 		logger.info("Categories");
 		try {
-			if (!Strings.isNullOrEmpty(filteredValue) && filteredValue.equalsIgnoreCase("true")) {
-				return new ResponseEntity<List<Category>>(categoryDao.getAllCategory(), HttpStatus.OK);
+			if (!Strings.isNullOrEmpty(filteredValue) && filteredValue.equalsIgnoreCase("true")) { //If filteredValue is "true", it fetches a filtered list; otherwise, it fetches all categories.
+				return new ResponseEntity<>(categoryDao.getAllCategory(), HttpStatus.OK);
 			}
-			return new ResponseEntity<List<Category>>(categoryDao.findAll(), HttpStatus.OK);
+			return new ResponseEntity<>(categoryDao.findAll(), HttpStatus.OK);
 		} catch (Exception ex) {
 			ex.printStackTrace();
 		}
-		return new ResponseEntity<List<Category>>(new ArrayList<>(), HttpStatus.INTERNAL_SERVER_ERROR);
+		return new ResponseEntity<>(new ArrayList<>(), HttpStatus.INTERNAL_SERVER_ERROR);
 	}
 
 	@Override
-	public ResponseEntity<String> updateCategory(Map<String, String> requsetMap) {
+	public ResponseEntity<String> updateCategory(Map<String, String> requestMap) {
 		try {
 			if (jwtFilter.isAdmin()) {
-				if (validateCategoryMap(requsetMap, true)) {
-					Optional optional = categoryDao.findById(Integer.parseInt(requsetMap.get("id")));
-					if (!optional.isEmpty()) {
-						categoryDao.save(getCategoryFromMap(requsetMap, true));
+				if (isValidForUpdate(requestMap)) { //Validates that both "name" and "id" are present in the request.
+					Optional<Category> optional = categoryDao.findById(Integer.parseInt(requestMap.get("id")));
+					if (optional.isPresent()) {
+						categoryDao.save(createCategoryForUpdate(requestMap));
 						return HotelUtils.getResponseEntity("Category updated Successfully", HttpStatus.OK);
 					} else {
 						return HotelUtils.getResponseEntity("Category ID does not exist", HttpStatus.OK);
@@ -105,5 +85,28 @@ public class CategoryServiceImpl implements CategoryService {
 			ex.printStackTrace();
 		}
 		return HotelUtils.getResponseEntity(HotelConstants.SOMETHING_WENT_WRONG, HttpStatus.INTERNAL_SERVER_ERROR);
+	}
+
+	// Refactored validation methods
+	private boolean isValidForAdd(Map<String, String> requestMap) {
+		return requestMap.containsKey("name");
+	}
+
+	private boolean isValidForUpdate(Map<String, String> requestMap) {
+		return requestMap.containsKey("name") && requestMap.containsKey("id");
+	}
+
+	// Refactored category creation methods
+	private Category createCategoryForAdd(Map<String, String> requestMap) {
+		Category category = new Category();
+		category.setName(requestMap.get("name"));
+		return category;
+	}
+
+	private Category createCategoryForUpdate(Map<String, String> requestMap) {
+		Category category = new Category();
+		category.setId(Integer.parseInt(requestMap.get("id")));
+		category.setName(requestMap.get("name"));
+		return category;
 	}
 }

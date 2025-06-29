@@ -16,11 +16,11 @@ import com.hotel.service.CategoryService;
 import com.hotel.utils.HotelUtils;
 
 @RestController
-public class CategoryRestImpl implements CategoryRest{
+public class CategoryRestImpl implements CategoryRest {
 
 	@Autowired
 	CategoryService categoryService;
-	
+
 	@Override
 	public ResponseEntity<String> addNewCategory(Map<String, String> requsetMap) {
 		try {
@@ -28,7 +28,7 @@ public class CategoryRestImpl implements CategoryRest{
 		} catch (Exception ex) {
 			ex.printStackTrace();
 		}
-		return HotelUtils.getResponseEntity(HotelConstants.SOMETHING_WENT_WRONG,HttpStatus.INTERNAL_SERVER_ERROR);
+		return HotelUtils.getResponseEntity(HotelConstants.SOMETHING_WENT_WRONG, HttpStatus.INTERNAL_SERVER_ERROR);
 	}
 
 	@Override
@@ -38,7 +38,7 @@ public class CategoryRestImpl implements CategoryRest{
 		} catch (Exception ex) {
 			ex.printStackTrace();
 		}
-		 return new ResponseEntity<>(new ArrayList<>(), HttpStatus.INTERNAL_SERVER_ERROR);
+		return new ResponseEntity<>(new ArrayList<>(), HttpStatus.INTERNAL_SERVER_ERROR);
 	}
 
 	@Override
@@ -50,6 +50,4 @@ public class CategoryRestImpl implements CategoryRest{
 		}
 		return HotelUtils.getResponseEntity(HotelConstants.SOMETHING_WENT_WRONG, HttpStatus.INTERNAL_SERVER_ERROR);
 	}
-
-
 }

@@ -64,9 +64,9 @@ public class ProductServiceImpl implements ProductService {
 
 		Product product = new Product();
 		if (isAdd) {
-			product.setId(Integer.parseInt(requestMap.get("id")));
+			product.setId(Integer.parseInt(requestMap.get("id")));//It does not set the status here, because the status is preserved from the existing product
 		} else {
-			product.setStatus("true");
+			product.setStatus("true");//This sets the product's status to "true" by default, meaning it's active when first created.
 		}
 		product.setCategory(category);
 		product.setName(requestMap.get("name"));

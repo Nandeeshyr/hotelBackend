@@ -1,5 +1,6 @@
 package com.hotel.utils;
 
+import java.io.File;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -39,6 +40,16 @@ public class HotelUtils {
 			return new Gson().fromJson(data, new TypeToken<Map<String, Object>>() {
 			}.getType());
 		return new HashMap<>();
+	}
+
+	public static Boolean isFileExist(String path) {
+		try {
+			File file = new File(path);
+			return (file != null && file.exists()) ? Boolean.TRUE : Boolean.FALSE;
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		}
+		return false;
 	}
 
 }

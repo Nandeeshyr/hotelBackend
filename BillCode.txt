@@ -1,3 +1,255 @@
+package com.hotel.POJO;
+
+import java.io.Serializable;
+
+import org.hibernate.annotations.DynamicInsert;
+import org.hibernate.annotations.DynamicUpdate;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.NamedQuery;
+import jakarta.persistence.Table;
+import lombok.Data;
+
+@NamedQuery(name = "Bill.getAllBills",query = "select b from Bill b order by b.id desc")
+
+@NamedQuery(name = "Bill.getBillByUsername", query = "select b from Bill b where b.createdBy=:username order by b.id desc")
+
+@Entity
+@DynamicInsert
+@DynamicUpdate
+@Table(name = "bill") // Creates DB table with this
+@Data
+public class Bill implements Serializable {
+
+	private static final long serialVersionUID = 1L;
+
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	@Column(name = "id")
+	private Integer id;
+
+	@Column(name = "uuid")
+	private String uuid;
+
+	@Column(name = "name")
+	private String name;
+
+	@Column(name = "email")
+	private String email;
+
+	@Column(name = "contactNumber")
+	private String contactNumber;
+
+	@Column(name = "paymentMethod")
+	private String paymentMethod;
+
+	@Column(name = "total")
+	private Integer total;
+
+	@Column(name = "productDetails", columnDefinition = "json")
+	private String productDetails;
+
+	@Column(name = "createdBy")
+	private String createdBy;
+
+	public Integer getId() {
+		return id;
+	}
+
+	public void setId(Integer id) {
+		this.id = id;
+	}
+
+	public String getUuid() {
+		return uuid;
+	}
+
+	public void setUuid(String uuid) {
+		this.uuid = uuid;
+	}
+
+	public String getName() {
+		return name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	public String getEmail() {
+		return email;
+	}
+
+	public void setEmail(String email) {
+		this.email = email;
+	}
+
+	public String getContactNumber() {
+		return contactNumber;
+	}
+
+	public void setContactNumber(String contactNumber) {
+		this.contactNumber = contactNumber;
+	}
+
+	public String getPaymentMethod() {
+		return paymentMethod;
+	}
+
+	public void setPaymentMethod(String paymentMethod) {
+		this.paymentMethod = paymentMethod;
+	}
+
+	public Integer getTotal() {
+		return total;
+	}
+
+	public void setTotal(Integer total) {
+		this.total = total;
+	}
+
+	public String getProductDetails() {
+		return productDetails;
+	}
+
+	public void setProductDetails(String productDetails) {
+		this.productDetails = productDetails;
+	}
+
+	public String getCreatedBy() {
+		return createdBy;
+	}
+
+	public void setCreatedBy(String createdBy) {
+		this.createdBy = createdBy;
+	}
+
+	public static long getSerialversionuid() {
+		return serialVersionUID;
+	}
+
+}
+
+package com.hotel.rest;
+
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+
+import com.hotel.POJO.Bill;
+
+@RequestMapping(path = "/bill")
+public interface BillRest {
+	
+	@PostMapping(path = "/generateReport")
+	ResponseEntity<String> generateReport(@RequestBody Map<String, Object> requestMap);
+	
+	@GetMapping(path = "/getBills")
+	ResponseEntity<List<Bill>> getBills();
+	
+	@PostMapping(path = "/getPdf")
+	ResponseEntity<byte[]> getPdf(@RequestBody Map<String, Object> requestMap);
+	
+	@PostMapping(path = "/delete/{id}")
+	ResponseEntity<String> deleteBill(@PathVariable Integer id);
+	
+	
+	
+}
+
+
+package com.hotel.restImpl;
+
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.hotel.POJO.Bill;
+import com.hotel.constants.HotelConstants;
+import com.hotel.rest.BillRest;
+import com.hotel.service.BillService;
+import com.hotel.utils.HotelUtils;
+
+@RestController
+public class BillRestImpl implements BillRest {
+
+	@Autowired
+	BillService billService;
+
+	@Override
+	public ResponseEntity<String> generateReport(Map<String, Object> requestMap) {
+		try {
+			return billService.generateReport(requestMap);
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		}
+		return HotelUtils.getResponseEntity(HotelConstants.SOMETHING_WENT_WRONG, HttpStatus.INTERNAL_SERVER_ERROR);
+	}
+
+	@Override
+	public ResponseEntity<List<Bill>> getBills() {
+			return billService.getBills();
+	}
+
+	@Override
+	public ResponseEntity<byte[]> getPdf(Map<String, Object> requestMap) {
+		try {
+			return billService.getPdf(requestMap);
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		}
+		return null;
+	}
+
+	@Override
+	public ResponseEntity<String> deleteBill(Integer id) {
+		try {
+			return billService.deleteBill(id);
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		}
+		return HotelUtils.getResponseEntity(HotelConstants.SOMETHING_WENT_WRONG, HttpStatus.INTERNAL_SERVER_ERROR);
+	}
+
+}
+
+
+package com.hotel.service;
+
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.http.ResponseEntity;
+
+import com.hotel.POJO.Bill;
+
+public interface BillService {
+
+	ResponseEntity<String> generateReport(Map<String, Object> requestMap);
+
+	ResponseEntity<List<Bill>> getBills();
+
+	ResponseEntity<byte[]> getPdf(Map<String, Object> requestMap);
+
+	ResponseEntity<String> deleteBill(Integer id);
+
+}
+
+
 package com.hotel.serviceImpl;
 
 import java.io.File;
@@ -184,17 +436,17 @@ public class BillServiceImpl implements BillService {
 
 	@Override
 	public ResponseEntity<List<Bill>> getBills() {
-		List<Bill> list = new ArrayList<>(); //Initializes an empty list that will hold the bill records.
+		List<Bill> list = new ArrayList<>();
 			if(jwtFilter.isAdmin()) {
-				list = billDao.getAllBills(); //If admin, fetches all bills from the database using the named query Bill.getAllBills.
+				list = billDao.getAllBills();
 			}else {
-				list = billDao.getBillByUsername(jwtFilter.getCurrentUser()); //If not admin, fetches only bills created by this user using Bill.getBillByUsername.
+				list = billDao.getBillByUsername(jwtFilter.getCurrentUser());
 			}
-			return new ResponseEntity<>(list, HttpStatus.OK);
+			return new ResponseEntity<>(list,HttpStatus.OK);
 	}
 
 	@Override
-	public ResponseEntity<byte[]> getPdf(Map<String, Object> requestMap) { //This method returns the PDF file (as a byte array) for the given bill UUID.
+	public ResponseEntity<byte[]> getPdf(Map<String, Object> requestMap) {
 		logger.info("Inside getPdf: requestMap {}",requestMap);
 		try {
 			byte[] byteArray = new byte[0];
@@ -241,3 +493,61 @@ public class BillServiceImpl implements BillService {
 	}
 
 }
+
+
+package com.hotel.utils;
+
+import java.io.File;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+
+import com.google.common.base.Strings;
+import com.google.common.reflect.TypeToken;
+import com.google.gson.Gson;
+
+public class HotelUtils {
+
+	private HotelUtils() {
+
+	}
+
+	public static ResponseEntity<String> getResponseEntity(String responseMessage, HttpStatus httpStatus) {
+		return new ResponseEntity<String>("{\"message\":\"" + responseMessage + "\"}", httpStatus);
+	}
+
+	public static String getUUID() {
+		Date date = new Date();
+		long time = date.getTime();
+		return "BILL-" + time;
+	}
+
+	public static JSONArray getJsonArrayFromString(String data) throws JSONException {
+		JSONArray jsonArray = new JSONArray(data);
+		return jsonArray;
+	}
+
+	public static Map<String, Object> getMapFromJson(String data) {
+		if (!Strings.isNullOrEmpty(data))
+			return new Gson().fromJson(data, new TypeToken<Map<String, Object>>() {
+			}.getType());
+		return new HashMap<>();
+	}
+
+	public static Boolean isFileExist(String path) {
+		try {
+			File file = new File(path);
+			return (file != null && file.exists()) ? Boolean.TRUE : Boolean.FALSE;
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		}
+		return false;
+	}
+
+}
+

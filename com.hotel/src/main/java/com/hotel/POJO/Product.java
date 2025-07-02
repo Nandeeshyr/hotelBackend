@@ -34,7 +34,9 @@ import lombok.Data;
 @Table(name = "product")
 public class Product implements Serializable {
 
-	public static final Long serialiVersionUid = 123456L;
+	public static final Long serialVersionUid = 123456L;
+	// Serializable: Allows the object to be converted into a byte stream, which is
+	// useful for caching, session storage, or network transmission.
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -44,8 +46,9 @@ public class Product implements Serializable {
 	@Column(name = "name")
 	private String name;
 
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "category_fk", nullable = false)
+	@ManyToOne(fetch = FetchType.LAZY) // A Product like “Coffee” belongs to a Category like “Beverages”. Category data
+										// is loaded only when the category field is accessed (e.g., product.getCategory()).
+	@JoinColumn(name = "category_fk", nullable = false) // Specifies the foreign key column name in the database table
 	private Category category;
 
 	@Column(name = "description")
@@ -105,8 +108,8 @@ public class Product implements Serializable {
 		this.status = status;
 	}
 
-	public static Long getSerialiversionuid() {
-		return serialiVersionUid;
+	public static Long getSerialversionuid() {
+		return serialVersionUid;
 	}
 
 }
